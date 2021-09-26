@@ -2,6 +2,8 @@
 #include "input_reader/input_reader.h"
 #include "scheduler/scheduler.h"
 
+void print_input(Input input);
+
 int main()
 {
     printf("\n## OS Process Scheduling MFQ Simulation ##\n");
@@ -9,6 +11,16 @@ int main()
     printf("\n# 1. Read input\n");
     Input input = read_input("resource/test-input.txt");
 
+    print_input(input);
+
+    printf("\n# 2. Scheduling\n");
+    schedule(input);
+
+    return 0;
+}
+
+void print_input(Input input)
+{
     printf("    * number of process: %d\n", input.number_of_process);
     int process_index;
     for (process_index = 0; process_index < input.number_of_process; process_index++)
@@ -21,9 +33,4 @@ int main()
         }
         printf("%d\n", input.process_inputs[process_index].cpu_burst_times[input.process_inputs[process_index].cycles - 1]);
     }
-
-    printf("\n# 2. Scheduling\n");
-    schedule(input);
-
-    return 0;
 }
