@@ -31,6 +31,7 @@ void schedule(Input input)
 
 void scheduler_init(Queue ready_queues[], Input input)
 {
+    // TODO: 현재 시간에 따라 ready queue 상태 달라질 듯 한번에 다 넣으면 안될 듯
     ProcessInput ordered_process_inputs[input.number_of_process];
 
     int i;
