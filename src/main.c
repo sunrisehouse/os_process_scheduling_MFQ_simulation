@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "input_reader.h"
+#include "input_reader/input_reader.h"
+#include "scheduler/scheduler.h"
 
 int main()
 {
@@ -22,6 +23,7 @@ int main()
     }
 
     printf("\n# 2. Scheduling\n");
+    schedule(input);
 
     return 0;
 }

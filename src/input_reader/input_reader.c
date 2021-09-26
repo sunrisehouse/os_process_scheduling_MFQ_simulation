@@ -19,12 +19,14 @@ Input read_input(char* file_name) {
         process_input.io_burst_times = (int *) malloc(sizeof(int) * (process_input.cycles - 1));
 
 
-        int index_of_cycles;
-        for (index_of_cycles = 0; index_of_cycles < process_input.cycles - 1; index_of_cycles++)
-        {
-            fscanf(fp, "%d %d", &process_input.cpu_burst_times[index_of_cycles], &process_input.io_burst_times[index_of_cycles]);
+        if (process_input.cycles > 0) {
+            int index_of_cycles;
+            for (index_of_cycles = 0; index_of_cycles < process_input.cycles - 1; index_of_cycles++)
+            {
+                fscanf(fp, "%d %d", &process_input.cpu_burst_times[index_of_cycles], &process_input.io_burst_times[index_of_cycles]);
+            }
+            fscanf(fp, "%d", &process_input.cpu_burst_times[index_of_cycles]);
         }
-        fscanf(fp, "%d", &process_input.cpu_burst_times[index_of_cycles]);
         
         input.process_inputs[index_of_process] = process_input;
     }
