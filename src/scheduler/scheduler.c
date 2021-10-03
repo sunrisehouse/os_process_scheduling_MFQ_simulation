@@ -58,7 +58,7 @@ void scheduler_init(Queue ready_queues[], Input input)
     for (index_of_process = 0; index_of_process < input.number_of_process; index_of_process++)
     {   
         ProcessId pid = ordered_process_inputs[index_of_process].id;
-        InitQueue init_queue = ordered_process_inputs[index_of_process].init_queue;
+        QueueId init_queue = ordered_process_inputs[index_of_process].init_queue;
         enqueue(&ready_queues[init_queue], pid);
     }
 }

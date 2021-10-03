@@ -2,17 +2,16 @@
 #define _TYPES_HEADER_FILE
 
 typedef int ProcessId;
-typedef int ArrivalTime;
-typedef int InitQueue;
-typedef int BurstTime;
+typedef int Time;
+typedef int QueueId;
 
 typedef struct ProcessInput {
     ProcessId id;
-    ArrivalTime arrival_time;
-    InitQueue init_queue;
+    Time arrival_time;
+    QueueId init_queue;
     int cycles;
-    BurstTime* cpu_burst_times;
-    BurstTime* io_burst_times;
+    Time* cpu_burst_times;
+    Time* io_burst_times;
 } ProcessInput;
 
 typedef struct Input {
