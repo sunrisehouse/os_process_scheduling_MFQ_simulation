@@ -21,7 +21,7 @@ typedef struct Queue
 Queue create_queue();
 void enqueue(Queue* queue, int data);
 int dequeue(Queue* queue);
-int get_length(Queue* queue);
-void print_queue();
+int get_length(Queue queue);
+void print_queue(Queue queue);
 
 #endif

@@ -7,16 +7,16 @@ Input read_input(char* file_name) {
     Input input;
     FILE *fp = fopen(file_name, "r");
 
-    fscanf(fp, "%d", &input.number_of_process);
-    input.process_inputs = (ProcessInput*) malloc(sizeof(ProcessInput) * input.number_of_process);
+    fscanf(fp, "%d", &input.number_of_processes);
+    input.process_inputs = (ProcessInput*) malloc(sizeof(ProcessInput) * input.number_of_processes);
 
     int index_of_process;
-    for (index_of_process = 0; index_of_process < input.number_of_process; index_of_process++)
+    for (index_of_process = 0; index_of_process < input.number_of_processes; index_of_process++)
     {
         ProcessInput process_input;
         fscanf(fp, "%d %d %d %d", &process_input.id, &process_input.arrival_time, &process_input.init_queue, &process_input.cycles);
-        process_input.cpu_burst_times = (int *) malloc(sizeof(int) * process_input.cycles);
-        process_input.io_burst_times = (int *) malloc(sizeof(int) * (process_input.cycles - 1));
+        process_input.cpu_burst_times = (SimulationTime *) malloc(sizeof(SimulationTime) * process_input.cycles);
+        process_input.io_burst_times = (SimulationTime *) malloc(sizeof(SimulationTime) * (process_input.cycles - 1));
 
 
         if (process_input.cycles > 0) {

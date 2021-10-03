@@ -21,9 +21,9 @@ int main()
 
 void print_input(Input input)
 {
-    printf("    * number of process: %d\n", input.number_of_process);
+    printf("    * number of process: %d\n", input.number_of_processes);
     int process_index;
-    for (process_index = 0; process_index < input.number_of_process; process_index++)
+    for (process_index = 0; process_index < input.number_of_processes; process_index++)
     {
         printf("    * (process %d) %d %d %d %d\t", process_index, input.process_inputs[process_index].id, input.process_inputs[process_index].arrival_time, input.process_inputs[process_index].init_queue, input.process_inputs[process_index].cycles);
         int cycle_index;

@@ -48,14 +48,14 @@ int dequeue(Queue* queue)
     return result;
 }
 
-int get_length(Queue* queue)
+int get_length(Queue queue)
 {
-    return queue->length;
+    return queue.length;
 }
 
-void print_queue(Queue* queue)
+void print_queue(Queue queue)
 {
-    QueueNode* pointer = queue->front;
+    QueueNode* pointer = queue.front;
     printf("queue(%d) ", get_length(queue));
     while(pointer != NULL)
     {

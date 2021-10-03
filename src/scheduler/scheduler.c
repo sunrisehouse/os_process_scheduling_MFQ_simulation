@@ -2,92 +2,255 @@
 
 void schedule(Input input)
 {
-    const int NUMBER_OF_READY_QUEUE = 4;
-    Queue ready_queues[NUMBER_OF_READY_QUEUE];
-    ready_queues[0] = create_queue();
-    ready_queues[1] = create_queue();
-    ready_queues[2] = create_queue();
-    ready_queues[3] = create_queue();
+    MFQScheduler scheduler;
+    scheduler_init(input, &scheduler);
 
-    scheduler_init(ready_queues, input);
+    // scheduler_print_processes(scheduler);
 
-    scheduler_print_ready_queues(ready_queues);
+    SimulationTime time = 0;
+    while (!scheduler_is_finished(scheduler))
+    {
+        printf("*****[%d] cycle************\n", time);
+        scheduler_push_process(time, &scheduler);
 
-    while (!scheduler_is_finished(ready_queues)) {
-        // TODO
-        // ready queue 에서 프로세스 하나 뽑고
-        ProcessId pid = scheduler_dequeue_ready_queues(ready_queues);
-        // cpu 작업하고
+        scheduler_print_ready_queues(scheduler);
 
-        // io 보내고
-        
-        // ready queue 로 다시 넣으면 될 듯
-        
+        if (scheduler.procerss_in_cpu == NULL)
+        {
+            scheduler_dispatch_process(&scheduler);            
+        }
 
-        printf("*****one cycle result*********\n");
-        scheduler_print_ready_queues(ready_queues);
+        // io
+        scheduler_process_io(&scheduler);
+
+        // cpu
+        if (scheduler.procerss_in_cpu != NULL)
+        {
+            scheduler_process_cpu(&scheduler);          
+        }
+
+        if (scheduler.procerss_in_cpu != NULL)
+        {
+            scheduler_after_cpu(time, &scheduler);       
+        }
+        scheduler_after_io(time, &scheduler);
+
+        scheduler_print_processes(scheduler);
+        time++;
     }
 }
 
-void scheduler_init(Queue ready_queues[], Input input)
-{
-    // TODO: 현재 시간에 따라 ready queue 상태 달라질 듯 한번에 다 넣으면 안될 듯
-    ProcessInput ordered_process_inputs[input.number_of_process];
-
+void scheduler_init(Input input, MFQScheduler* scheduler) {
     int i;
-    for (i = 0; i < input.number_of_process; i++)
+    for (i = 0; i < MFQ_READY_QUEUE_SIZE; i++)
     {
-        ordered_process_inputs[i] = input.process_inputs[i];
+        scheduler->ready_queues[i] = create_queue();
     }
 
-    for (i = 0; i < input.number_of_process; i++)
+    scheduler->number_of_processes = input.number_of_processes;
+    scheduler->processes = (Process *) malloc(sizeof(Process) * scheduler->number_of_processes);
+
+    scheduler->procerss_in_cpu = NULL;
+    scheduler->preemtion_timer = 0;
+
+    for (i = 0; i < scheduler->number_of_processes; i++)
     {
+        ProcessInput pi = input.process_inputs[i];
+        scheduler->processes[i].id = pi.id;
+        scheduler->processes[i].arrival_time = pi.arrival_time;
+        scheduler->processes[i].queue_id = pi.init_queue;
+        scheduler->processes[i].is_in_io = false;
+        scheduler->processes[i].cpu_times = create_queue();
+        scheduler->processes[i].io_times = create_queue();
+
         int j;
-        for (j = 0; j < input.number_of_process - i - 1; j++)
+        for (j = 0; j < pi.cycles; j++)
         {
-            if (ordered_process_inputs[i].arrival_time > ordered_process_inputs[i + 1].arrival_time)
+            enqueue(&scheduler->processes[i].cpu_times, pi.cpu_burst_times[j]);
+        }
+
+        for (j = 0; j < pi.cycles - 1; j++)
+        {
+            enqueue(&scheduler->processes[i].io_times, pi.io_burst_times[j]);
+        }
+    }
+}
+
+void scheduler_push_process(SimulationTime time, MFQScheduler* scheduler)
+{
+    int number_of_processes = scheduler->number_of_processes;
+    int i;
+    for (i = 0; i < number_of_processes; i++)
+    {
+        Process pr = scheduler->processes[i];
+        if (pr.arrival_time == time && get_length(pr.cpu_times) > 0)
+        {
+            printf("process (%d) go to ready queue\n", pr.id);
+            enqueue(&scheduler->ready_queues[pr.queue_id], pr.id);
+        }
+    }
+}
+
+void scheduler_dispatch_process(MFQScheduler* scheduler)
+{
+    int i;
+    for (i = 0; i < MFQ_READY_QUEUE_SIZE; i++)
+    {
+        if (get_length(scheduler->ready_queues[i]) == 0) continue;
+        ProcessId pid = dequeue(&scheduler->ready_queues[i]);
+        int j;
+        for (j = 0; j < scheduler->number_of_processes; j++)
+        {
+            if (scheduler->processes[j].id == pid)
             {
-                ProcessInput temp = ordered_process_inputs[i + 1];
-                ordered_process_inputs[i + 1] = ordered_process_inputs[i];
-                ordered_process_inputs[i] = temp;
+                scheduler->procerss_in_cpu = &scheduler->processes[j];
+                break;
+            }
+        }
+
+        if (scheduler->procerss_in_cpu != NULL) break;
+    }
+
+    if (scheduler->procerss_in_cpu == NULL) return;
+    
+    printf("process (%d) pop ready queues\n", scheduler->procerss_in_cpu->id);
+
+    if (scheduler->procerss_in_cpu->queue_id == 0)
+    {
+        scheduler->preemtion_timer = 1;
+    }
+    else if (scheduler->procerss_in_cpu->queue_id == 1)
+    {
+        scheduler->preemtion_timer = 2;
+    }
+    else if (scheduler->procerss_in_cpu->queue_id == 2)
+    {
+        scheduler->preemtion_timer = 4;
+    }
+    else if (scheduler->procerss_in_cpu->queue_id == 3)
+    {
+    }
+    printf("process (%d) is dispatched with %s, %d\n", scheduler->procerss_in_cpu->id, scheduler_get_current_scheduler_technique(*scheduler) == RR ? "RR" : "FCFR", scheduler->procerss_in_cpu->cpu_times.front->data);
+}
+
+void scheduler_process_io(MFQScheduler* scheduler) {
+    int i;
+    for (i = 0; i < scheduler->number_of_processes; i++)
+    {
+        if (scheduler->processes[i].is_in_io && get_length(scheduler->processes[i].io_times) > 0)
+        {
+            scheduler->processes[i].io_times.front->data -= 1;
+            printf("process (%d) do io, io time: %d \n", scheduler->processes[i].id, scheduler->processes[i].io_times.front->data);
+        }
+    }
+}
+
+void scheduler_process_cpu(MFQScheduler* scheduler) {
+    printf("process (%d) do cpu: ", scheduler->procerss_in_cpu->id);
+    if (scheduler_get_current_scheduler_technique(*scheduler) == RR)
+    {
+        scheduler->preemtion_timer -= 1;
+        scheduler->procerss_in_cpu->cpu_times.front->data -= 1;
+        printf("RR preemtion timer: %d, cpu times %d \n", scheduler->preemtion_timer, scheduler->procerss_in_cpu->cpu_times.front->data);
+    }
+    else if (scheduler_get_current_scheduler_technique(*scheduler) == FCFR)
+    {
+        scheduler->procerss_in_cpu->cpu_times.front->data -= 1;
+        printf("FCFR preemtion timer: %d\n", scheduler->preemtion_timer);
+    }
+}
+
+void scheduler_after_cpu(SimulationTime time, MFQScheduler* scheduler)
+{
+    if (scheduler->procerss_in_cpu->cpu_times.front->data == 0)
+    {
+        // cpu burst 끝 io 시작
+        printf("process (%d) cpu burst end\n", scheduler->procerss_in_cpu->id);
+        scheduler->procerss_in_cpu->is_in_io = true;
+        if (scheduler->procerss_in_cpu->queue_id > 0 && scheduler->procerss_in_cpu->queue_id < 2)
+        {
+            scheduler->procerss_in_cpu->queue_id -= 1;
+        }
+        dequeue(&scheduler->procerss_in_cpu->cpu_times);
+        scheduler->procerss_in_cpu = NULL;
+    }
+    else if (scheduler_get_current_scheduler_technique(*scheduler) == RR && scheduler->preemtion_timer == 0)
+    {
+        // preemtion 해야함
+        printf("process (%d) preemtion\n", scheduler->procerss_in_cpu->id);
+        scheduler->procerss_in_cpu->arrival_time = time + 1;
+        if (scheduler->procerss_in_cpu->queue_id < 2)
+        {
+            scheduler->procerss_in_cpu->queue_id += 1;
+        }
+        scheduler->procerss_in_cpu = NULL;
+    }
+}
+
+void scheduler_after_io(SimulationTime time, MFQScheduler* scheduler)
+{
+    int i;
+    for (i = 0; i < scheduler->number_of_processes; i++)
+    {
+        if (scheduler->processes[i].is_in_io)
+        {
+            printf("process (%d) io end\n", scheduler->processes[i].id);
+
+            if (get_length(scheduler->processes[i].io_times) > 0 && scheduler->processes[i].io_times.front->data == 0)
+            {
+                dequeue(&scheduler->processes[i].io_times);
+                scheduler->processes[i].arrival_time = time + 1;
+                scheduler->processes[i].is_in_io = false;
+            }
+            else if (get_length(scheduler->processes[i].io_times) == 0)
+            {
+                scheduler->processes[i].is_in_io = false;
             }
         }
     }
-
-    int index_of_process;
-    for (index_of_process = 0; index_of_process < input.number_of_process; index_of_process++)
-    {   
-        ProcessId pid = ordered_process_inputs[index_of_process].id;
-        QueueId init_queue = ordered_process_inputs[index_of_process].init_queue;
-        enqueue(&ready_queues[init_queue], pid);
-    }
 }
 
-bool scheduler_is_finished(Queue ready_queues[])
+bool scheduler_is_finished(MFQScheduler scheduler)
 {
-    return ready_queues[0].length == 0
-        && ready_queues[1].length == 0
-        && ready_queues[2].length == 0
-        && ready_queues[3].length == 0; 
-}
-
-void scheduler_print_ready_queues(Queue ready_queues[])
-{
-    print_queue(&ready_queues[0]);
-    print_queue(&ready_queues[1]);
-    print_queue(&ready_queues[2]);
-    print_queue(&ready_queues[3]);
-}
-
-ProcessId scheduler_dequeue_ready_queues(Queue ready_queues[])
-{
-    int queue_index;
-    for (queue_index = 0; queue_index < 4; queue_index++)
+    int i;
+    for (i = 0; i < scheduler.number_of_processes; i++)
     {
-        if (ready_queues[queue_index].length > 0)
-        {
-            return dequeue(&ready_queues[queue_index]);
-        }
+        if (get_length(scheduler.processes[i].cpu_times) > 0) return false;
     }
-    return -1;
+    return true;
+}
+
+SchedulerTechnique scheduler_get_current_scheduler_technique(MFQScheduler scheduler)
+{
+    return QUEUE_SCHEDULER_TECHNIQUES[scheduler.procerss_in_cpu->queue_id];
+}
+
+void scheduler_print_ready_queues(MFQScheduler scheduler)
+{
+    printf("Ready Queue\n");
+    int i;
+    for (i = 0; i < MFQ_READY_QUEUE_SIZE; i++)
+    {
+        printf("  ");
+        print_queue(scheduler.ready_queues[i]);
+    }
+    printf("\n\n");
+}
+
+void scheduler_print_processes(MFQScheduler scheduler)
+{
+    printf("\nProcesses\n");
+    int i;
+    for (i = 0; i < scheduler.number_of_processes; i++)
+    {
+        printf("  process (%d)\n", scheduler.processes[i].id);
+        printf("    cpu: ");
+        print_queue(scheduler.processes[i].cpu_times);
+        printf("    io: ");
+        print_queue(scheduler.processes[i].io_times);
+        printf("    arrival time: %d\n", scheduler.processes[i].arrival_time);
+        printf("    queue id: %d\n", scheduler.processes[i].queue_id);
+        printf("    is in io?: %s\n", scheduler.processes[i].is_in_io ? "true" : "false");
+    }
+    printf("\n");
 }
