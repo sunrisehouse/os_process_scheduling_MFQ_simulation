@@ -10,6 +10,14 @@ void schedule(Input input)
     SimulationTime time = 0;
     while (!scheduler_is_finished(scheduler))
     {
+        if (time % 1 == 0)
+        {
+            printf("input any character: ");
+            char a[10];
+            scanf("%c", a);
+
+            if (a[0] == 'x') break;
+        }
         printf("*****[%d] cycle************\n", time);
         scheduler_push_process(time, &scheduler);
 
