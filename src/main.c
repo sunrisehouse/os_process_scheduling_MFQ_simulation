@@ -33,12 +33,16 @@ void print_total_result();
 List g_gantt_chart;
 List g_process_results;
 
-int main()
+int main(int argc, char* argv[])
 {
+    if (argc != 2) return 1;
+    char* input_file_name = argv[1];
+
     printf("\n## OS Process Scheduling MFQ Simulation ##\n");
 
     printf("\n# 1. Read input\n");
-    Input input = read_input("resource/test-input.txt");
+    printf("    file name: %s", input_file_name);
+    Input input = read_input(input_file_name);
 
     print_input(input);
 
