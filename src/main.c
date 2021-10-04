@@ -1,15 +1,28 @@
 #include <stdio.h>
 #include "input_reader/input_reader.h"
 #include "scheduler/scheduler.h"
+#include "list.h"
+
+typedef struct Gantt {
+    ProcessId process_id;
+    SimulationTime arrival_time;
+    SimulationTime in;
+    SimulationTime out;
+} Gantt;
 
 void print_input(Input input);
+void print_gantt(void* data, int i);
 void on_dispatch(ProcessId pid, SimulationTime time);
-void on_finish_cpu_burst(ProcessId pid, SimulationTime time);
-void on_preemtion(ProcessId pid, SimulationTime time);
+void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time);
+void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time);
+
+List g_gantt_chart;
 
 int main()
 {
     printf("\n## OS Process Scheduling MFQ Simulation ##\n");
+
+    g_gantt_chart = create_list();
 
     printf("\n# 1. Read input\n");
     Input input = read_input("resource/test-input.txt");
@@ -17,12 +30,16 @@ int main()
     print_input(input);
 
     printf("\n# 2. Scheduling\n");
+
     schedule(
         input,
         on_dispatch,
         on_finish_cpu_burst,
         on_preemtion
     );
+
+    printf("process\t\tarrival time\tdispatch time\tsleep time\n");
+    list_for_each(&g_gantt_chart, print_gantt);
 
     return 0;
 }
@@ -43,17 +60,32 @@ void print_input(Input input)
     }
 }
 
+void print_gantt(void* data, int i)
+{
+    Gantt* gt = (Gantt *) data;
+    printf("[procss %d]\t%d\t\t%d\t\t%d\n", gt->process_id, gt->arrival_time, gt->in, gt->out);
+}
+
 void on_dispatch(ProcessId pid, SimulationTime time)
 {
-    printf("[%d]\t%d", pid, time);
 }
 
-void on_finish_cpu_burst(ProcessId pid, SimulationTime time)
+void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
 {
-    printf("\t%d\n", time + 1);
+    Gantt* gt = (Gantt *) malloc(sizeof(Gantt));
+    gt->process_id = pid;
+    gt->arrival_time = arrival_time;
+    gt->in = in_time;
+    gt->out = out_time + 1;
+    list_push(&g_gantt_chart, gt);
 }
 
-void on_preemtion(ProcessId pid, SimulationTime time)
+void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
 {
-    printf("\t%d\n", time + 1);
+    Gantt* gt = (Gantt *) malloc(sizeof(Gantt));
+    gt->process_id = pid;
+    gt->arrival_time = arrival_time;
+    gt->in = in_time;
+    gt->out = out_time + 1;
+    list_push(&g_gantt_chart, gt);
 }

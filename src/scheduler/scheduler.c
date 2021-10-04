@@ -147,6 +147,7 @@ void scheduler_dispatch_process(MFQScheduler* scheduler, void on_dispatch(Proces
                 else if (scheduler->procerss_in_cpu->queue_id == 3)
                 {
                 }
+                scheduler->dispatched_itme = scheduler->time;
                 on_dispatch(scheduler->procerss_in_cpu->id, scheduler->time);
                 #ifdef DEBUG
                 printf("[dispatch] process (%d) with %s, %d\n", scheduler->procerss_in_cpu->id, scheduler_get_current_scheduler_technique(*scheduler) == RR ? "RR" : "FCFR", scheduler->procerss_in_cpu->cpu_times.front->data);
@@ -191,8 +192,8 @@ void scheduler_burst_cpu(MFQScheduler* scheduler) {
 
 void scheduler_after_cpu(
     MFQScheduler* scheduler,
-    void on_finish_cpu_burst(ProcessId pid, SimulationTime time),
-    void on_preemtion(ProcessId pid, SimulationTime time)
+    void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time),
+    void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
 )
 {
     Process* pr = scheduler->procerss_in_cpu;
@@ -211,20 +212,21 @@ void scheduler_after_cpu(
             }
         }
         scheduler->procerss_in_cpu = NULL;
-        on_finish_cpu_burst(pr->id, scheduler->time);
+        on_finish_cpu_burst(pr->id, pr->arrival_time, scheduler->dispatched_itme, scheduler->time);
     }
     else if (scheduler_get_current_scheduler_technique(*scheduler) == RR && scheduler->preemtion_timer == 0)
     {
         #ifdef DEBUG
         printf("[preemtion] process (%d)\n", pr->id);
         #endif
+        SimulationTime arrival_time = pr->arrival_time;
         pr->arrival_time = scheduler->time + 1;
         if (pr->queue_id < 2)
         {
             pr->queue_id += 1;
         }
         scheduler->procerss_in_cpu = NULL;
-        on_preemtion(pr->id, scheduler->time);
+        on_preemtion(pr->id, arrival_time, scheduler->dispatched_itme, scheduler->time);
     }
 }
 

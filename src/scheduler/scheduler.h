@@ -34,6 +34,7 @@ typedef struct MFQScheduler {
     Process* procerss_in_cpu;
     SimulationTime preemtion_timer;
     SimulationTime time;
+    SimulationTime dispatched_itme;
 } MFQScheduler;
 
 void schedule(
@@ -44,7 +45,10 @@ void schedule(
 );
 void scheduler_init(Input input, MFQScheduler* scheduler);
 void scheduler_push_process(MFQScheduler* scheduler);
-void scheduler_dispatch_process(MFQScheduler* scheduler, void on_dispatch(ProcessId, SimulationTime));
+void scheduler_dispatch_process(
+    MFQScheduler* scheduler,
+    void on_dispatch(ProcessId, SimulationTime)
+);
 bool scheduler_is_finished(MFQScheduler scheduler);
 void scheduler_print_ready_queues(MFQScheduler scheduler);
 void scheduler_print_processes(MFQScheduler scheduler);
@@ -52,8 +56,8 @@ void scheduler_burst_io(MFQScheduler* scheduler);
 void scheduler_burst_cpu(MFQScheduler* scheduler);
 void scheduler_after_cpu(
     MFQScheduler* scheduler,
-    void on_finish_cpu_burst(ProcessId pid, SimulationTime time),
-    void on_preemtion(ProcessId pid, SimulationTime time)
+    void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time),
+    void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
 );
 void scheduler_after_io(MFQScheduler* scheduler);
 SchedulerTechnique scheduler_get_current_scheduler_technique(MFQScheduler scheduler);
