@@ -27,21 +27,21 @@ void schedule(Input input)
 
         if (scheduler.procerss_in_cpu == NULL)
         {
-            scheduler_dispatch_process(&scheduler);            
+            scheduler_dispatch_process(&scheduler);
         }
 
         // io
-        scheduler_process_io(&scheduler);
+        scheduler_burst_io(&scheduler);
 
         // cpu
         if (scheduler.procerss_in_cpu != NULL)
         {
-            scheduler_process_cpu(&scheduler);          
+            scheduler_burst_cpu(&scheduler); 
         }
 
         if (scheduler.procerss_in_cpu != NULL)
         {
-            scheduler_after_cpu(time, &scheduler);       
+            scheduler_after_cpu(time, &scheduler);
         }
         scheduler_after_io(time, &scheduler);
 
@@ -143,7 +143,7 @@ void scheduler_dispatch_process(MFQScheduler* scheduler)
     printf("process (%d) is dispatched with %s, %d\n", scheduler->procerss_in_cpu->id, scheduler_get_current_scheduler_technique(*scheduler) == RR ? "RR" : "FCFR", scheduler->procerss_in_cpu->cpu_times.front->data);
 }
 
-void scheduler_process_io(MFQScheduler* scheduler) {
+void scheduler_burst_io(MFQScheduler* scheduler) {
     int i;
     for (i = 0; i < scheduler->number_of_processes; i++)
     {
@@ -155,7 +155,7 @@ void scheduler_process_io(MFQScheduler* scheduler) {
     }
 }
 
-void scheduler_process_cpu(MFQScheduler* scheduler) {
+void scheduler_burst_cpu(MFQScheduler* scheduler) {
     printf("process (%d) do cpu: ", scheduler->procerss_in_cpu->id);
     if (scheduler_get_current_scheduler_technique(*scheduler) == RR)
     {
