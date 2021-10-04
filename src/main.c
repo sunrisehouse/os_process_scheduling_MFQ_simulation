@@ -9,6 +9,7 @@ typedef struct Gantt
     SimulationTime arrival_time;
     SimulationTime in;
     SimulationTime out;
+    QueueId queue_id;
 } Gantt;
 
 typedef struct ProcessResult
@@ -19,8 +20,9 @@ typedef struct ProcessResult
 } ProcessResult;
 
 void on_dispatch(ProcessId pid, SimulationTime time);
-void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time);
-void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time);
+void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time, QueueId queue_id);
+void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time, QueueId queue_id);
+void on_exit_process(ProcessId pid, SimulationTime arrival_time, SimulationTime exit_time);
 void initialize_process_result(Input input);
 void add_result(void* result, int index);
 void print_input(Input input);
@@ -57,7 +59,8 @@ int main(int argc, char* argv[])
         input,
         on_dispatch,
         on_finish_cpu_burst,
-        on_preemtion
+        on_preemtion,
+        on_exit_process
     );
 
     printf("\n# 3. Result\n");
@@ -89,13 +92,14 @@ void on_dispatch(ProcessId pid, SimulationTime time)
 {
 }
 
-void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
+void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time, QueueId queue_id)
 {
     Gantt* gt = (Gantt *) malloc(sizeof(Gantt));
     gt->process_id = pid;
     gt->arrival_time = arrival_time;
     gt->in = in_time;
-    gt->out = out_time + 1;
+    gt->out = out_time;
+    gt->queue_id = queue_id;
     list_push(&g_gantt_chart, gt);
 
     ListNode* current_node = g_process_results.front;
@@ -104,20 +108,20 @@ void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationT
         ProcessResult* pr = (ProcessResult *)current_node->data;
         if (pr->process_id == pid)
         {
-            pr->total_turnaround_time += out_time - arrival_time;
             pr->total_wating_time += in_time - arrival_time;
             break;
         }
     }
 }
 
-void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
+void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time, QueueId queue_id)
 {
     Gantt* gt = (Gantt *) malloc(sizeof(Gantt));
     gt->process_id = pid;
     gt->arrival_time = arrival_time;
     gt->in = in_time;
-    gt->out = out_time + 1;
+    gt->out = out_time;
+    gt->queue_id = queue_id;
     list_push(&g_gantt_chart, gt);
 
     ListNode* current_node = g_process_results.front;
@@ -126,12 +130,26 @@ void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_
         ProcessResult* pr = (ProcessResult *)current_node->data;
         if (pr->process_id == pid)
         {
-            pr->total_turnaround_time += out_time - arrival_time;
             pr->total_wating_time += in_time - arrival_time;
             break;
         }
     }
 }
+
+void on_exit_process(ProcessId pid, SimulationTime arrival_time, SimulationTime exit_time)
+{
+    ListNode* current_node = g_process_results.front;
+    for (current_node = g_process_results.front; current_node != NULL; current_node = current_node->next)
+    {
+        ProcessResult* pr = (ProcessResult *)current_node->data;
+        if (pr->process_id == pid)
+        {
+            pr->total_turnaround_time += exit_time - arrival_time;
+            break;
+        }
+    }
+}
+
 void print_input(Input input)
 {
     printf("    * number of process: %d\n", input.number_of_processes);
