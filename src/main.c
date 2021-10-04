@@ -3,6 +3,9 @@
 #include "scheduler/scheduler.h"
 
 void print_input(Input input);
+void on_dispatch(ProcessId pid, SimulationTime time);
+void on_finish_cpu_burst(ProcessId pid, SimulationTime time);
+void on_preemtion(ProcessId pid, SimulationTime time);
 
 int main()
 {
@@ -14,7 +17,12 @@ int main()
     print_input(input);
 
     printf("\n# 2. Scheduling\n");
-    schedule(input);
+    schedule(
+        input,
+        on_dispatch,
+        on_finish_cpu_burst,
+        on_preemtion
+    );
 
     return 0;
 }
@@ -33,4 +41,19 @@ void print_input(Input input)
         }
         printf("%d\n", input.process_inputs[process_index].cpu_burst_times[input.process_inputs[process_index].cycles - 1]);
     }
+}
+
+void on_dispatch(ProcessId pid, SimulationTime time)
+{
+    printf("[%d]\t%d", pid, time);
+}
+
+void on_finish_cpu_burst(ProcessId pid, SimulationTime time)
+{
+    printf("\t%d\n", time + 1);
+}
+
+void on_preemtion(ProcessId pid, SimulationTime time)
+{
+    printf("\t%d\n", time + 1);
 }

@@ -1,13 +1,17 @@
 #include "scheduler.h"
 
-void schedule(Input input)
+void schedule(
+    Input input,
+    void on_dispatch(ProcessId, SimulationTime),
+    void on_finish_cpu_burst(ProcessId pid, SimulationTime time),
+    void on_preemtion(ProcessId pid, SimulationTime time)
+)
 {
     MFQScheduler scheduler;
     scheduler_init(input, &scheduler);
 
     // scheduler_print_processes(scheduler);
 
-    SimulationTime time = 0;
     while (!scheduler_is_finished(scheduler))
     {
         #ifdef DEBUG
@@ -25,7 +29,7 @@ void schedule(Input input)
         printf("--------[%d cycle]--------\n\n", time);
         #endif
 
-        scheduler_push_process(time, &scheduler);
+        scheduler_push_process(&scheduler);
 
         #ifdef DEBUG
         scheduler_print_ready_queues(scheduler);
@@ -33,7 +37,7 @@ void schedule(Input input)
 
         if (scheduler.procerss_in_cpu == NULL)
         {
-            scheduler_dispatch_process(&scheduler);
+            scheduler_dispatch_process(&scheduler, on_dispatch);
         }
 
         // io
@@ -47,9 +51,9 @@ void schedule(Input input)
 
         if (scheduler.procerss_in_cpu != NULL)
         {
-            scheduler_after_cpu(time, &scheduler);
+            scheduler_after_cpu(&scheduler, on_finish_cpu_burst, on_preemtion);
         }
-        scheduler_after_io(time, &scheduler);
+        scheduler_after_io(&scheduler);
 
 
         #ifdef DEBUG
@@ -57,7 +61,7 @@ void schedule(Input input)
         scheduler_print_processes(scheduler);
         #endif
 
-        time++;
+        scheduler.time++;
     }
 }
 
@@ -67,7 +71,7 @@ void scheduler_init(Input input, MFQScheduler* scheduler) {
     {
         scheduler->ready_queues[i] = create_queue();
     }
-
+    scheduler->time = 0;
     scheduler->number_of_processes = input.number_of_processes;
     scheduler->processes = (Process *) malloc(sizeof(Process) * scheduler->number_of_processes);
 
@@ -97,14 +101,14 @@ void scheduler_init(Input input, MFQScheduler* scheduler) {
     }
 }
 
-void scheduler_push_process(SimulationTime time, MFQScheduler* scheduler)
+void scheduler_push_process(MFQScheduler* scheduler)
 {
     int number_of_processes = scheduler->number_of_processes;
     int i;
     for (i = 0; i < number_of_processes; i++)
     {
         Process pr = scheduler->processes[i];
-        if (pr.arrival_time == time && get_length(pr.cpu_times) > 0)
+        if (pr.arrival_time == scheduler->time && get_length(pr.cpu_times) > 0)
         {
             #ifdef DEBUG
             printf("[push ready queue] process (%d)\n", pr.id);
@@ -114,7 +118,7 @@ void scheduler_push_process(SimulationTime time, MFQScheduler* scheduler)
     }
 }
 
-void scheduler_dispatch_process(MFQScheduler* scheduler)
+void scheduler_dispatch_process(MFQScheduler* scheduler, void on_dispatch(ProcessId, SimulationTime))
 {
     int i;
     for (i = 0; i < MFQ_READY_QUEUE_SIZE; i++)
@@ -127,33 +131,30 @@ void scheduler_dispatch_process(MFQScheduler* scheduler)
             if (scheduler->processes[j].id == pid)
             {
                 scheduler->procerss_in_cpu = &scheduler->processes[j];
-                break;
+
+                if (scheduler->procerss_in_cpu->queue_id == 0)
+                {
+                    scheduler->preemtion_timer = 1;
+                }
+                else if (scheduler->procerss_in_cpu->queue_id == 1)
+                {
+                    scheduler->preemtion_timer = 2;
+                }
+                else if (scheduler->procerss_in_cpu->queue_id == 2)
+                {
+                    scheduler->preemtion_timer = 4;
+                }
+                else if (scheduler->procerss_in_cpu->queue_id == 3)
+                {
+                }
+                on_dispatch(scheduler->procerss_in_cpu->id, scheduler->time);
+                #ifdef DEBUG
+                printf("[dispatch] process (%d) with %s, %d\n", scheduler->procerss_in_cpu->id, scheduler_get_current_scheduler_technique(*scheduler) == RR ? "RR" : "FCFR", scheduler->procerss_in_cpu->cpu_times.front->data);
+                #endif
+                return;
             }
         }
-
-        if (scheduler->procerss_in_cpu != NULL) break;
     }
-
-    if (scheduler->procerss_in_cpu == NULL) return;
-
-    if (scheduler->procerss_in_cpu->queue_id == 0)
-    {
-        scheduler->preemtion_timer = 1;
-    }
-    else if (scheduler->procerss_in_cpu->queue_id == 1)
-    {
-        scheduler->preemtion_timer = 2;
-    }
-    else if (scheduler->procerss_in_cpu->queue_id == 2)
-    {
-        scheduler->preemtion_timer = 4;
-    }
-    else if (scheduler->procerss_in_cpu->queue_id == 3)
-    {
-    }
-    #ifdef DEBUG
-    printf("[dispatch] process (%d) with %s, %d\n", scheduler->procerss_in_cpu->id, scheduler_get_current_scheduler_technique(*scheduler) == RR ? "RR" : "FCFR", scheduler->procerss_in_cpu->cpu_times.front->data);
-    #endif
 }
 
 void scheduler_burst_io(MFQScheduler* scheduler) {
@@ -188,39 +189,46 @@ void scheduler_burst_cpu(MFQScheduler* scheduler) {
     }
 }
 
-void scheduler_after_cpu(SimulationTime time, MFQScheduler* scheduler)
+void scheduler_after_cpu(
+    MFQScheduler* scheduler,
+    void on_finish_cpu_burst(ProcessId pid, SimulationTime time),
+    void on_preemtion(ProcessId pid, SimulationTime time)
+)
 {
-    if (scheduler->procerss_in_cpu->cpu_times.front->data == 0)
+    Process* pr = scheduler->procerss_in_cpu;
+    if (pr->cpu_times.front->data == 0)
     {
         #ifdef DEBUG
-        printf("[cpu burst end] process (%d)\n", scheduler->procerss_in_cpu->id);
+        printf("[cpu burst end] process (%d)\n", pr->id);
         #endif
-        dequeue(&scheduler->procerss_in_cpu->cpu_times);
-        if (get_length(scheduler->procerss_in_cpu->io_times) > 0)
+        dequeue(&pr->cpu_times);
+        if (get_length(pr->io_times) > 0)
         {
-            scheduler->procerss_in_cpu->is_in_io = true;
-            if (scheduler->procerss_in_cpu->queue_id > 0 && scheduler->procerss_in_cpu->queue_id < 2)
+            pr->is_in_io = true;
+            if (pr->queue_id > 0 && pr->queue_id < 2)
             {
-                scheduler->procerss_in_cpu->queue_id -= 1;
+                pr->queue_id -= 1;
             }
         }
         scheduler->procerss_in_cpu = NULL;
+        on_finish_cpu_burst(pr->id, scheduler->time);
     }
     else if (scheduler_get_current_scheduler_technique(*scheduler) == RR && scheduler->preemtion_timer == 0)
     {
         #ifdef DEBUG
-        printf("[preemtion] process (%d)\n", scheduler->procerss_in_cpu->id);
+        printf("[preemtion] process (%d)\n", pr->id);
         #endif
-        scheduler->procerss_in_cpu->arrival_time = time + 1;
-        if (scheduler->procerss_in_cpu->queue_id < 2)
+        pr->arrival_time = scheduler->time + 1;
+        if (pr->queue_id < 2)
         {
-            scheduler->procerss_in_cpu->queue_id += 1;
+            pr->queue_id += 1;
         }
         scheduler->procerss_in_cpu = NULL;
+        on_preemtion(pr->id, scheduler->time);
     }
 }
 
-void scheduler_after_io(SimulationTime time, MFQScheduler* scheduler)
+void scheduler_after_io(MFQScheduler* scheduler)
 {
     int i;
     for (i = 0; i < scheduler->number_of_processes; i++)
@@ -233,7 +241,7 @@ void scheduler_after_io(SimulationTime time, MFQScheduler* scheduler)
                 printf("[IO end]: process(%d)\n", scheduler->processes[i].id);
                 #endif
                 dequeue(&scheduler->processes[i].io_times);
-                scheduler->processes[i].arrival_time = time + 1;
+                scheduler->processes[i].arrival_time = scheduler->time + 1;
                 scheduler->processes[i].is_in_io = false;
             }
         }
