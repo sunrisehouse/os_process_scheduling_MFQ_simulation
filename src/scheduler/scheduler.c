@@ -10,6 +10,7 @@ void schedule(Input input)
     SimulationTime time = 0;
     while (!scheduler_is_finished(scheduler))
     {
+        /*
         if (time % 1 == 0)
         {
             printf("input any character: ");
@@ -18,6 +19,7 @@ void schedule(Input input)
 
             if (a[0] == 'x') break;
         }
+        */
         printf("*****[%d] cycle************\n", time);
         scheduler_push_process(time, &scheduler);
 
@@ -174,12 +176,15 @@ void scheduler_after_cpu(SimulationTime time, MFQScheduler* scheduler)
     {
         // cpu burst 끝 io 시작
         printf("process (%d) cpu burst end\n", scheduler->procerss_in_cpu->id);
-        scheduler->procerss_in_cpu->is_in_io = true;
-        if (scheduler->procerss_in_cpu->queue_id > 0 && scheduler->procerss_in_cpu->queue_id < 2)
-        {
-            scheduler->procerss_in_cpu->queue_id -= 1;
-        }
         dequeue(&scheduler->procerss_in_cpu->cpu_times);
+        if (get_length(scheduler->procerss_in_cpu->io_times) > 0)
+        {
+            scheduler->procerss_in_cpu->is_in_io = true;
+            if (scheduler->procerss_in_cpu->queue_id > 0 && scheduler->procerss_in_cpu->queue_id < 2)
+            {
+                scheduler->procerss_in_cpu->queue_id -= 1;
+            }
+        }
         scheduler->procerss_in_cpu = NULL;
     }
     else if (scheduler_get_current_scheduler_technique(*scheduler) == RR && scheduler->preemtion_timer == 0)
@@ -208,10 +213,6 @@ void scheduler_after_io(SimulationTime time, MFQScheduler* scheduler)
             {
                 dequeue(&scheduler->processes[i].io_times);
                 scheduler->processes[i].arrival_time = time + 1;
-                scheduler->processes[i].is_in_io = false;
-            }
-            else if (get_length(scheduler->processes[i].io_times) == 0)
-            {
                 scheduler->processes[i].is_in_io = false;
             }
         }
