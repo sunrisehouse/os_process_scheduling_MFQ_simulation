@@ -3,8 +3,8 @@
 void schedule(
     Input input,
     void on_dispatch(ProcessId, SimulationTime),
-    void on_finish_cpu_burst(ProcessId pid, SimulationTime time),
-    void on_preemtion(ProcessId pid, SimulationTime time)
+    void on_finish_cpu_burst(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time),
+    void on_preemtion(ProcessId pid, SimulationTime arrival_time, SimulationTime in_time, SimulationTime out_time)
 )
 {
     MFQScheduler scheduler;
