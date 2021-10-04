@@ -51,9 +51,9 @@ void schedule(Input input)
         }
         scheduler_after_io(time, &scheduler);
 
-        printf("\n");
 
         #ifdef DEBUG
+        printf("\n");
         scheduler_print_processes(scheduler);
         #endif
 

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "../types.h"
-#include "queue.h"
+#include "../queue.h"
 
 
 typedef struct Process {

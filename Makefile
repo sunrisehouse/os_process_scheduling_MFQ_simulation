@@ -13,7 +13,7 @@ $(BUILD_DIR)/types.o : $(SOURCE_DIR)/types.c
 $(BUILD_DIR)/input_reader.o : $(SOURCE_DIR)/input_reader/input_reader.c
 	$(CC) -c -o $@ $^
 
-$(BUILD_DIR)/queue.o : $(SOURCE_DIR)/scheduler/queue.c
+$(BUILD_DIR)/queue.o : $(SOURCE_DIR)/queue.c
 	$(CC) -c -o $@ $^
 
 $(BUILD_DIR)/scheduler.o : $(SOURCE_DIR)/scheduler/scheduler.c
