@@ -22,14 +22,14 @@ int main()
 {
     printf("\n## OS Process Scheduling MFQ Simulation ##\n");
 
-    g_gantt_chart = create_list();
-
     printf("\n# 1. Read input\n");
     Input input = read_input("resource/test-input.txt");
 
     print_input(input);
 
     printf("\n# 2. Scheduling\n");
+
+    g_gantt_chart = create_list();
 
     schedule(
         input,
@@ -38,7 +38,7 @@ int main()
         on_preemtion
     );
 
-    printf("process\t\tarrival time\tdispatch time\tsleep time\n");
+    printf("    process\tarrival time\tdispatch time\n");
     list_for_each(&g_gantt_chart, print_gantt);
 
     return 0;
@@ -63,7 +63,7 @@ void print_input(Input input)
 void print_gantt(void* data, int i)
 {
     Gantt* gt = (Gantt *) data;
-    printf("[procss %d]\t%d\t\t%d\t\t%d\n", gt->process_id, gt->arrival_time, gt->in, gt->out);
+    printf("    %d\t\t%d\t\t%d ~ %d\n", gt->process_id, gt->arrival_time, gt->in, gt->out);
 }
 
 void on_dispatch(ProcessId pid, SimulationTime time)
