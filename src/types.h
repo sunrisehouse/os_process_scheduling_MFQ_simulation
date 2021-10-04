@@ -19,4 +19,14 @@ typedef struct Input {
     ProcessInput* process_inputs;
 } Input;
 
+typedef struct Gantt {
+    ProcessId process_id;
+    SimulationTime in;
+    SimulationTime out;
+} Gantt;
+
+typedef struct Result {
+    Gantt* gantt_chart;
+} Result;
+
 #endif
