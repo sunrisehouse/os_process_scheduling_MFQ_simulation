@@ -16,7 +16,7 @@ void schedule(
     while (!scheduler_is_finished(scheduler))
     {
         #ifdef DEBUG
-        if (time % 1 == 0)
+        if (scheduler.time % 1 == 0)
         {
             printf("input any character: ");
             char a[10];
@@ -27,7 +27,7 @@ void schedule(
         #endif
 
         #ifdef DEBUG
-        printf("--------[%d cycle]--------\n\n", time);
+        printf("--------[%d cycle]--------\n\n", scheduler.time);
         #endif
 
         scheduler_push_process(&scheduler);
